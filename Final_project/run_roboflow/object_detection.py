@@ -12,7 +12,11 @@ import os
 load_dotenv()
 
 api_key = os.getenv("ROBOFLOW_API_KEY")
-print("api_key", api_key)
+host = os.getenv("MYSQL_HOST")
+port = int(os.getenv("MYSQL_PORT"))
+user = os.getenv("MYSQL_USER")
+password = os.getenv("MYSQL_PASS")
+DB_NAME = os.getenv("MYSQL_DB")
 
 # load a pre-trained yolov8n model
 model = get_model(model_id="fruits-by-yolo/1")
@@ -29,8 +33,7 @@ colors = {
     'Watermelon':  (255, 99, 132)    # 粉紅紅 (跟蘋果同色)
 }
 # DB const variable
-TABLE_NAME = "smart_refrigerator"
-DB_NAME = "anndb"
+TABLE_NAME = os.getenv("TABLE_NAME")
 ####################################################
 def infer_frame(frame):
     # run inference on the image
@@ -113,16 +116,16 @@ def select_ID(table_name=TABLE_NAME): # get all the ID
     rows = cur.fetchall()
     return rows
         
-def init_db_table(db_name=DB_NAME, table_name=TABLE_NAME):
+def init_db_table(table_name=TABLE_NAME):
     # connect db
     # Connect to MySQL server on your laptop
     global cnx
     cnx = mysql.connector.connect(
-        host="127.0.0.1",  # Your laptop's IP address
-        port=3306,           # MySQL default port
-        user="usr002",       # Your MySQL username
-        password="aiot0000", # Your MySQL password
-        database=db_name  # Target database
+        host=host,
+        port=port,
+        user=user,
+        password=password,
+        database=DB_NAME
     )
      # Create a cursor object
     global cur
@@ -236,13 +239,13 @@ def object_detect(id_name, device, source):
 
 if __name__ == "__main__":
     try:
-        status = init_db_table(DB_NAME, TABLE_NAME)
+        status = init_db_table(TABLE_NAME)
         # set up basic info
         id_name = "a002"
         device = "mypc"
         # object_detect(id_name, device, "videos/apple_flow.mp4") # main program to detect objects and write it into db
         # object_detect(id_name, device, 0) # main program to detect objects and write it into db
-        url = "http://172.20.10.3:4747/video"
+        url = os.getenv("DROID_CAM")
         object_detect(id_name, device, url) # main program to detect objects and write it into db
     except mysql.connector.Error as err:
         print(f"\033[91mMySQL Error: {err}\033[0m")
