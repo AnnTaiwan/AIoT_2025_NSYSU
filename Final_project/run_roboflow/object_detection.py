@@ -18,6 +18,8 @@ user = os.getenv("MYSQL_USER")
 password = os.getenv("MYSQL_PASS")
 DB_NAME = os.getenv("MYSQL_DB")
 
+cnx = None
+cur = None
 # load a pre-trained yolov8n model
 model = get_model(model_id="fruits-by-yolo/1")
 Class_Names = model.class_names
@@ -60,15 +62,15 @@ def infer_frame(frame):
 
 
 
-def insert_data(id_name, device, time_data, frame:str, table_name=TABLE_NAME):
+def insert_data(id_name, device, time_data, frame:str, action:bool, table_name=TABLE_NAME):
     # SQL query to insert data
     sql = f"""
-        INSERT INTO {table_name} (ID, Device, Date, Frame)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO {table_name} (ID, Device, Date, Frame, Action)
+        VALUES (%s, %s, %s, %s, %s)
     """
     
     # Data to insert
-    data = (id_name, device, time_data, frame) 
+    data = (id_name, device, time_data, frame, action) 
 
     # Execute the SQL query
     cur.execute(sql, data)
@@ -183,12 +185,12 @@ def object_detect(id_name, device, source):
                 if not SHOT_OR_NOT and abs(mid - MIDDLE_X) <= 3:
                     # only crop the object
                     cropped_object = frame[int(y_min):int(y_max), int(x_min):int(x_max)]
-                    filepath = "screenshots/" + Class_Names[class_ids[i]] + "_" + str(count) + ".jpg"
+                    filepath = "static/screenshots/" + Class_Names[class_ids[i]] + "_" + str(count) + ".jpg"
                     cv2.imwrite(filepath, cropped_object)
                     # insert path into db
                     # Get the current time in %Y-%m-%d %H:%M:%S format
                     data_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    insert_data(id_name, device, data_time, filepath)
+                    insert_data(id_name, device, data_time, filepath, STATUS == "TAKE")
                     # print the info
                     print(f"{count}: {data_time} Take the screenshot at {box}, and saved in {filepath}")
                     # record the fruits
@@ -243,7 +245,7 @@ if __name__ == "__main__":
         # set up basic info
         id_name = "a002"
         device = "mypc"
-        # object_detect(id_name, device, "videos/apple_flow.mp4") # main program to detect objects and write it into db
+        # object_detect(id_name, device, "videos/apple_flow2.mp4") # main program to detect objects and write it into db
         # object_detect(id_name, device, 0) # main program to detect objects and write it into db
         url = os.getenv("DROID_CAM")
         object_detect(id_name, device, url) # main program to detect objects and write it into db
