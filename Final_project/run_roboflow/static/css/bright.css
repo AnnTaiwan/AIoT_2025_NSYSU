@@ -1,0 +1,251 @@
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto+Slab&display=swap');
+
+body {
+    margin: 0;
+    font-family: 'Merriweather', serif;
+    background-color: #f5f3ef;
+    color: #3a3a3a;
+    /* 木紋紋理背景 */
+    background-image:
+      linear-gradient(135deg, rgba(180, 106, 62, 0.07) 25%, transparent 25%),
+      linear-gradient(225deg, rgba(180, 106, 62, 0.07) 25%, transparent 25%),
+      linear-gradient(45deg, rgba(180, 106, 62, 0.07) 25%, transparent 25%),
+      linear-gradient(315deg, rgba(180, 106, 62, 0.07) 25%, #f5f3ef 25%);
+    background-position: 10px 0, 10px 0, 0 0, 0 0;
+    background-repeat: repeat;
+    background-size: 20px 20px;
+}
+
+.button {
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 20px;
+    cursor: pointer;
+    border: 2px solid #8b5e2c;
+    background-color: #d9c7b0; /* 柔和木色 */
+    color: #5a3e1b;
+    border-radius: 10px;
+    box-shadow:
+      inset 0 2px 5px rgba(255,255,255,0.6),
+      0 4px 6px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+    font-family: 'Roboto Slab', serif;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+}
+
+.button:hover {
+    background-color: #f2b100;
+    color: #f5f3ef;
+    box-shadow:
+      0 0 12px #a77a45,
+      inset 0 2px 5px rgba(255,255,255,0.8);
+    transform: translateY(-3px);
+}
+
+.button.active {
+    background-color: #8b5e2c;
+    color: #f5f3ef;
+    box-shadow: 0 0 14px #8b5e2c, inset 0 2px 8px rgba(255,255,255,0.9);
+    transform: translateY(-2px);
+}
+
+/* 圖片區塊 */
+.image-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 15px;
+    padding: 1%;
+    background: linear-gradient(145deg, #e9e6de 0%, #d5c8b0 100%);
+    border-radius: 16px;
+    box-shadow:
+      inset 0 0 15px rgba(139, 94, 44, 0.25),
+      0 4px 12px rgba(101, 73, 34, 0.3);
+    border: 2px solid #a77a45;
+}
+
+.image-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 140px;
+    background-color: #f6f1e7;
+    border: 1.5px solid #a77a45;
+    border-radius: 14px;
+    box-shadow:
+      2px 4px 8px rgba(139, 94, 44, 0.3),
+      inset 0 1px 3px rgba(255,255,255,0.7);
+    padding: 12px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+}
+
+.image-container:hover {
+    transform: translateY(-7px);
+    box-shadow:
+      4px 6px 14px rgba(139, 94, 44, 0.6),
+      inset 0 1px 3px rgba(255,255,255,0.9);
+}
+
+.label-image {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 2px solid #8b5e2c;
+    box-shadow: 0 2px 5px rgba(139,94,44,0.5);
+}
+
+/* 木釘裝飾 */
+.image-container::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 8px;
+    height: 8px;
+    background: radial-gradient(circle at center, #8b5e2c 60%, #5a3e1b 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(90, 62, 27, 0.8);
+}
+
+.image-label {
+    text-align: center;
+    margin-top: 6px;
+    font-size: 15px;
+    line-height: 1.4;
+    color: #5a3e1b;
+    font-weight: 600;
+}
+
+.label-text {
+    color: #8b5e2c;
+    font-weight: 700;
+    margin-bottom: 5px;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.7);
+}
+
+.label-date-in {
+    color: #a47642;
+    font-size: 12px;
+}
+
+.label-date-out {
+    color: #7d6737;
+    font-size: 12px;
+}
+
+/* 左側感測器資訊 */
+#left_panel {
+    flex: 1;
+    overflow-y: visible;
+    border: 2px solid #a77a45;
+    border-radius: 14px;
+    padding: 8px 10px;
+    background-color: #f6f1e7;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    box-shadow: inset 0 0 10px rgba(139, 94, 44, 0.15);
+}
+
+#left_panel h2 {
+    color: #8b5e2c;
+    margin-top: 1px;
+    margin-bottom: 1px;
+    font-family: 'Roboto Slab', serif;
+    font-weight: 700;
+    font-size: 24px;
+    border-bottom: 2px solid #a77a45;
+    padding-bottom: 6px;
+}
+
+/* 副標題，例如某些區塊的次標題 */
+#left_panel h3 {
+    color: #a47642;
+    font-family: 'Roboto Slab', serif;
+    font-weight: 600;
+    font-size: 18px;
+    margin: 12px 0 8px 0;
+    border-left: 4px solid #a77a45;
+    padding-left: 8px;
+}
+
+/* 內容文字區塊 */
+#left_panel p, #left_panel div {
+    color: #5a3e1b;
+    font-weight: 500;
+    line-height: 1.5;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    font-size: 15px;
+}
+
+/* 重要提示或警告文字 */
+#bool_warnings div, #date_duration div {
+    background-color: #f9f4e9;
+    border-left: 3px solid #a77a45;
+    padding: 6px 12px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #6b4b1a;
+}
+
+
+/* Chart 底色 */
+canvas {
+    background-color: #fdfbf7;
+    border: 2px solid #a77a45;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(139, 94, 44, 0.2);
+}
+
+/* 調整兩張 chart 高度，防止滾動條 */
+#left_panel canvas {
+    height: 180px !important;
+    max-height: 180px;
+}
+
+/* 右側內容物區塊 */
+#right_panel {
+    flex: 1;
+    overflow-y: auto;
+    border: 2px solid #a77a45;
+    border-radius: 14px;
+    padding: 15px;
+    background-color: #f6f1e7;
+    box-shadow: inset 0 0 10px rgba(139, 94, 44, 0.15);
+}
+#right_panel h2 {
+    color: #8b5e2c;
+    margin-top: 1px;
+    margin-bottom: 14px;
+    font-family: 'Roboto Slab', serif;
+    font-weight: 700;
+    font-size: 24px;
+    border-bottom: 2px solid #a77a45;
+    padding-bottom: 6px;
+}
+.screenshots h2, .screenshots h3 {
+    color: #8b5e2c;
+    font-family: 'Roboto Slab', serif;
+}
+
+.screenshots button {
+    margin: 0 6px;
+    font-family: 'Roboto Slab', serif;
+}
+
+/* 分頁效果 */
+.tab-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.tab-buttons .button {
+    flex: 1;
+    text-align: center;
+}

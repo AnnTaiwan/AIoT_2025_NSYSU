@@ -4,61 +4,26 @@
     <meta charset="UTF-8" />
     <title>智慧冰箱</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .button {
-            margin: 5px;
-            padding: 8px 16px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        .image-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 20px;
-        }
-        .image-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 120px;
-        }
-        .label-image {
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .image-label {
-            margin-top: 6px;
-            font-weight: bold;
-            text-align: center;
-        }
-    </style>
+    <!-- <link rel="stylesheet" href="/static/css/sci.css"/> -->
+    <!-- <link rel="stylesheet" href="/static/css/refri.css"/> -->
+    <link rel="stylesheet" href="/static/css/bright.css"/>
 
     <script>
-        let chartTemp, chartHumid, chartWeight;
+        let chartTemp, chartHumid;
 
         function initCharts() {
         const ctxTemp = document.getElementById('chart_temp').getContext('2d');
         const ctxHumid = document.getElementById('chart_humid').getContext('2d');
-        const ctxWeight = document.getElementById('chart_weight').getContext('2d');
 
         chartTemp = new Chart(ctxTemp, {
             type: 'line',
             data: { labels: [], datasets: [{ label: 'Temperature', data: [], borderColor: 'red', fill: false }] },
-            options: { responsive: true, scales: { x: { display: true }, y: { beginAtZero: true } } }
+            options: { responsive: true, scales: { x: { display: true, autoSkip: false }, y: { beginAtZero: true } } }
         });
         chartHumid = new Chart(ctxHumid, {
             type: 'line',
             data: { labels: [], datasets: [{ label: 'Humidity', data: [], borderColor: 'blue', fill: false }] },
-            options: { responsive: true, scales: { x: { display: true }, y: { beginAtZero: true } } }
-        });
-        chartWeight = new Chart(ctxWeight, {
-            type: 'line',
-            data: { labels: [], datasets: [{ label: 'Weight', data: [], borderColor: 'green', fill: false }] },
-            options: { responsive: true, scales: { x: { display: true }, y: { beginAtZero: true } } }
+            options: { responsive: true, scales: { x: { display: true, autoSkip: false}, y: { beginAtZero: true } } }
         });
         }
 
@@ -66,18 +31,16 @@
         fetch('/show_sensors', { method: 'POST' })
             .then(res => res.json())
             .then(data => {
+
             // 用Date當X軸標籤
-            chartTemp.data.labels = data.Date;
-            chartTemp.data.datasets[0].data = data.Temperature;
+            chartTemp.data.labels = data.Date.slice().reverse().map(dt => dt.split(' ')[4]);
+            chartTemp.data.datasets[0].data = data.Temperature.slice().reverse();
             chartTemp.update();
 
-            chartHumid.data.labels = data.Date;
-            chartHumid.data.datasets[0].data = data.Humid;
+            chartHumid.data.labels = data.Date.slice().reverse().map(dt => dt.split(' ')[4]);
+            chartHumid.data.datasets[0].data = data.Humid.slice().reverse();
             chartHumid.update();
 
-            chartWeight.data.labels = data.Date;
-            chartWeight.data.datasets[0].data = data.Weight;
-            chartWeight.update();
 
             // Buzzer, Door bool顯示警告燈（紅燈亮起）
             // 若有任一值為true，顯示紅燈，否則顯示綠燈OK
@@ -85,44 +48,48 @@
             const doorOn = data.Door[0] === true;
 
             const buzzerSpan = document.getElementById('buzzer_status');
-            buzzerSpan.textContent = buzzerOn ? '⚠️ 警告 冰箱門開太久了 警示音開啟' : '冰箱門開啟時間正常 警示音未開啟';
+            buzzerSpan.textContent = buzzerOn ? '⚠️ 冰箱門開太久了 警示音開啟' : '冰箱門開啟時間正常或尚未開啟 警示音未開啟';
             buzzerSpan.style.color = buzzerOn ? 'red' : 'green';
 
             const doorSpan = document.getElementById('door_status');
-            doorSpan.textContent = doorOn ? '冰箱門開啟中' : '冰箱門關閉中';
+            doorSpan.textContent = doorOn ? '冰箱門開啟中' : '冰箱門關閉';
             doorSpan.style.color = doorOn ? 'blue' : 'black';
 
-            const tem_abnormalOn = data.tem_abnoraml[0] === true;
-            const hum_abnormalOn = data.hum_abnoraml[0] === true;
+            const tem_abnormalOn = data.tem_abnormal[0] === true;
+            const hum_abnormalOn = data.hum_abnormal[0] === true;
 
             const tem_abnormal_Span = document.getElementById('tem_status');
-            tem_abnormal_Span.textContent = data.Temperature[0] + "℃" + (tem_abnormalOn ? ' ⚠️ 溫度異常 警告' : ' 正常');
+            tem_abnormal_Span.textContent = data.Temperature[0] + "℃ " + (tem_abnormalOn ? '⚠️ 溫度異常' : '溫度正常');
             tem_abnormal_Span.style.color = tem_abnormalOn ? 'red' : 'green';
 
             const hum_abnormal_Span = document.getElementById('hum_status');
-            hum_abnormal_Span.textContent = data.Humid[0] + "%" + (hum_abnormalOn ? ' ⚠️ 濕度異常 警告' : ' 正常');
+            hum_abnormal_Span.textContent = data.Humid[0] + "% " + (hum_abnormalOn ? '⚠️ 濕度異常' : '濕度正常');
             hum_abnormal_Span.style.color = hum_abnormalOn ? 'red' : 'green';
             // Duration 和 Date 取最後一筆最新資料顯示
             document.getElementById('date_value').textContent = data.Date[0] || '--';
-            document.getElementById('duration_value').textContent = data.Duration[0] || '--';
+            document.getElementById('duration_value').textContent = (data.Duration[0] || '--') + "秒";
             });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             initCharts();
             setInterval(deal_sensor_value, 1000);
+            setInterval(turn_to_present, 3000);
         });
 
         function turn_to_present() {
             fetch('/show_images', { method: 'POST' })
                 .then(res => res.json())
                 .then(data => {
+                    document.querySelectorAll('.button').forEach(btn => btn.classList.remove('active'));
+                    document.getElementById('btn_present').classList.add('active');
+
                     const imageBox = document.getElementById('images');
                     imageBox.innerHTML = '';
 
                     const imagePaths = data.output_frame;
                     const actions = data.output_action;
-
+                    const dates = data.output_date;
                     imagePaths.forEach((path, index) => {
                         if (actions[index] === false) {
                             const container = document.createElement('div');
@@ -140,7 +107,10 @@
                             const label = document.createElement('div');
                             const filename = path.split('/').pop();
                             const labelText = filename.split('_')[0];
-                            label.textContent = labelText;
+                            label.innerHTML = `
+                                <div class="label-text">${labelText}</div>
+                                <div class="label-date-in">${dates[index]}</div>
+                                `;
                             label.className = 'image-label';
 
                             container.appendChild(img);
@@ -155,11 +125,15 @@
             fetch('/show_images', { method: 'POST' })
                 .then(res => res.json())
                 .then(data => {
+                    document.querySelectorAll('.button').forEach(btn => btn.classList.remove('active'));
+                    document.getElementById('btn_takeout').classList.add('active');
+
                     const imageBox = document.getElementById('images');
                     imageBox.innerHTML = '';
 
                     const imagePaths = data.output_frame;
                     const actions = data.output_action;
+                    const dates = data.output_date;
 
                     imagePaths.forEach((path, index) => {
                         if (actions[index] === true) {
@@ -178,7 +152,10 @@
                             const label = document.createElement('div');
                             const filename = path.split('/').pop();
                             const labelText = filename.split('_')[0];
-                            label.textContent = labelText;
+                            label.innerHTML = `
+                                <div class="label-text">${labelText}</div>
+                                <div class="label-date-out">${dates[index]}</div>
+                                `;
                             label.className = 'image-label';
 
                             container.appendChild(img);
@@ -192,48 +169,45 @@
 </head>
 
 <body>
-  <div style="display: flex; height: 100vh; gap: 20px; padding: 20px; box-sizing: border-box;">
-    
+    <div style="padding: 0px; text-align: center;">
+        <h1 style="font-size: 35px; margin: 0;">智慧冰箱監控系統</h1>
+    </div>
     <!-- 左側：sensor資訊 -->
-    <div id="left_panel" style="flex: 1; overflow-y: auto; border: 1px solid #ccc; padding: 10px;">
-      <h2>感測器資料</h2>
-      <div id="bool_warnings" style="margin-top: 20px; font-weight: bold;">
-        <div>Buzzer: <span id="buzzer_status"></span></div>
-        <div>Door: <span id="door_status"></span></div>
-        <div>溫度狀態: <span id="tem_status"></span></div>
-        <div>濕度狀態: <span id="hum_status"></span></div>
-      </div>
+    <div style="display: flex; height: 100vh; gap: 20px; padding: 10px; box-sizing: border-box;">
+        <div id="left_panel">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>感測器資料</h2>
+                <div id="date_duration">
+                最新更新日期: <span id="date_value"></span>
+                </div>
+            </div>
 
-      <div id="date_duration" style="margin-top: 20px;">
-        <div>Date: <span id="date_value"></span></div>
-        <div>Duration: <span id="duration_value"></span></div>
-      </div>
+            <div id="bool_warnings" style="margin-top: 10px; font-weight: bold;">
+                <div>冰箱狀態: <span id="door_status"></span></div>
+                <div>溫度狀態: <span id="tem_status"></span></div>
+                <div>濕度狀態: <span id="hum_status"></span></div>
+                <div>蜂鳴器: <span id="buzzer_status"></span></div>
+                <div>冰箱門已開啟時間: <span id="duration_value"></span></div>
+            </div>
 
-      <div>
-        <canvas id="chart_temp" height="150"></canvas>
-        <canvas id="chart_humid" height="150"></canvas>
-        <canvas id="chart_weight" height="150"></canvas>
-      </div>
-
-      
-    </div>
-
-    <!-- 右側：圖片區(你提供的HTML) -->
-    <div id="right_panel" style="flex: 1; overflow-y: auto; border: 1px solid #ccc; padding: 10px;">
-      <!-- 這裡放你原本的圖片HTML內容 -->
-      <!-- 建議用iframe或直接複製你的HTML內右側<div class="screenshots">區塊 -->
-      <!-- 下面是示意，可以直接複製你的右側內容 -->
-      <div class="screenshots">
-        <h2>冰箱內容物</h2>
-        <h3>目前冰箱內容物 / 剛取出內容物</h3>
-        <div>
-          <button class="button" onclick="turn_to_present()">目前冰箱內容物</button>
-          <button class="button" onclick="turn_to_take_out()">取出內容物</button>
+            <div>
+                <canvas id="chart_temp"></canvas>
+                <canvas id="chart_humid"></canvas>
+            </div>
         </div>
-        <div id="images" class="image-grid"></div>
-      </div>
+
+        <div id="right_panel" style="flex: 1; overflow-y: auto; border: 2px solid #ccc; padding: 10px;">
+        <div class="screenshots">
+            <h2>冰箱內容</h2>
+            <div class="tab-buttons">
+                <button id="btn_present" class="button active" onclick="turn_to_present()">目前冰箱內容物</button>
+                <button id="btn_takeout" class="button" onclick="turn_to_take_out()">已取出</button>
+            </div>
+            <div id="images" class="image-grid"></div>
+        </div>
+        </div>
     </div>
-  </div>
+  </body>
 </body>
 
 </html>

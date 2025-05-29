@@ -16,9 +16,6 @@ password = os.getenv("MYSQL_PASS")
 DB_NAME = os.getenv("MYSQL_DB")
 TABLE_NAME = os.getenv("TABLE_NAME")
 
-cnx = None
-cur = None
-
 from datetime import datetime, timedelta
 
 def generate_random_sensor_data(n=10):
@@ -41,6 +38,16 @@ def generate_random_sensor_data(n=10):
         data.append(row)
     return data
 
+def get_connection():
+    cnx = mysql.connector.connect(
+        host=host,
+        port=port,
+        user=user,
+        password=password,
+        database=DB_NAME
+    )
+    return cnx
+
 def insert_data(id_name, device, time_data, frame:str, table_name=TABLE_NAME):
     # SQL query to insert data
     sql = f"""
@@ -50,6 +57,8 @@ def insert_data(id_name, device, time_data, frame:str, table_name=TABLE_NAME):
     
     # Data to insert
     data = (id_name, device, time_data, frame) 
+    cnx = get_connection()
+    cur = cnx.cursor()
 
     # Execute the SQL query
     cur.execute(sql, data)
@@ -64,6 +73,8 @@ def delete_data_by_ID(id_name="a002"):
     
     # Data to insert
     data = (id_name,) 
+    cnx = get_connection()
+    cur = cnx.cursor()
 
     # Execute the SQL query
     cur.execute(sql, data)
@@ -75,8 +86,9 @@ def delete_data_by_ID(id_name="a002"):
 def select_all(table_name=TABLE_NAME):
     # SQL query to delete data
     # select all except the frame(too big)
-    sql = "SELECT ID, Device, Date, Temperature, Humid, Weight,	Buzzer, Door, Duration, Frame FROM " + table_name
-    
+    sql = "SELECT ID, Device, Date, Temperature, Humid,	Buzzer, Door, Duration, Frame FROM " + table_name
+    cnx = get_connection()
+    cur = cnx.cursor()
     # Execute the SQL query
     cur.execute(sql)
     print("List all data in table now:")
@@ -87,12 +99,15 @@ def select_all(table_name=TABLE_NAME):
     return rows
 def select_recent_sensor(table_name=TABLE_NAME):
     sql = f"""
-        SELECT ID, Device, Date, Temperature, Humid, Weight, Buzzer, Door, Duration
+        SELECT ID, Device, Date, Temperature, Humid, Buzzer, Door, Duration
         FROM {table_name}
         WHERE ID = 'a001'
         ORDER BY Date DESC
-        LIMIT 500
+        LIMIT 50
     """
+    cnx = get_connection()
+    cur = cnx.cursor()
+
     cur.execute(sql)
     rows = cur.fetchall()
     return rows
@@ -104,6 +119,9 @@ def select_recent_frame(table_name=TABLE_NAME):
         WHERE ID = 'a002'
         ORDER BY Date DESC
     """
+    cnx = get_connection()
+    cur = cnx.cursor()
+
     cur.execute(sql)
     rows = cur.fetchall()
     return rows
@@ -111,6 +129,8 @@ def select_recent_frame(table_name=TABLE_NAME):
 def select_ID(table_name=TABLE_NAME): # get all the ID
     # SQL query to delete data
     sql = "SELECT ID FROM " + table_name
+    cnx = get_connection()
+    cur = cnx.cursor()
     
     # Execute the SQL query
     cur.execute(sql)
@@ -120,24 +140,13 @@ def select_ID(table_name=TABLE_NAME): # get all the ID
     return rows
 
 def connect_db_table(table_name=TABLE_NAME):
-    global cnx
     try:
-        cnx = mysql.connector.connect(
-            host=host,
-            port=port,
-            user=user,
-            password=password,
-            database=DB_NAME
-        )
-
+        cnx = get_connection()
         if cnx.is_connected():
             print(f"\033[92m✅ Connected to MySQL database {DB_NAME}\033[0m")
         else:
             print(f"\033[91m❌ Failed to connect to MySQL database {DB_NAME}\033[0m")
             return False
-
-        global cur
-        cur = cnx.cursor()
 
         # Test a query
         results = select_all(table_name)
@@ -154,38 +163,39 @@ def index():
 @app.route('/show_images', methods=['POST'])
 def show_images():
     rows_frame = select_recent_frame()
+    dates = [row[2] for row in rows_frame]
     image_paths = [row[3] for row in rows_frame]
     actions = [bool(row[4]) for row in rows_frame]  # 確保是布林值
+    print(actions)
     return jsonify({
+        'output_date': dates,
         'output_frame': image_paths,
         'output_action': actions
     })
 
 @app.route('/show_sensors', methods=['POST'])
 def show_sensors(): # return value in decreasing date
-    # rows_sensor = select_recent_sensor()  # 假設會回傳多筆資料，每筆是tuple/list
-    rows_sensor = generate_random_sensor_data(50)
+    rows_sensor = select_recent_sensor()  # 假設會回傳多筆資料，每筆是tuple/list
+    # rows_sensor = generate_random_sensor_data(50)
 
     # 分別抽取欄位，轉換成list
     Date = [row[2] for row in rows_sensor]
     Temperature = [row[3] for row in rows_sensor]
     Humid = [row[4] for row in rows_sensor]
-    Weight = [row[5] for row in rows_sensor]
-    Buzzer = [bool(row[6]) for row in rows_sensor]
-    Door = [bool(row[7]) for row in rows_sensor]
-    Duration = [row[8] for row in rows_sensor]
+    Buzzer = [bool(row[5]) for row in rows_sensor]
+    Door = [bool(row[6]) for row in rows_sensor]
+    Duration = [row[7] for row in rows_sensor]
     tem_abnoraml = [not ((tem < 80) and (tem > 20)) for tem in Temperature]
     hum_abnoraml = [not ((hum < 50) and (hum > 20)) for hum in Humid]
     return jsonify({
         'Date': Date,
         'Temperature': Temperature,
         'Humid': Humid,
-        'Weight': Weight,
         'Buzzer': Buzzer,
         'Door': Door,
         'Duration': Duration,
-        'tem_abnoraml': tem_abnoraml,
-        'hum_abnoraml': hum_abnoraml
+        'tem_abnormal': tem_abnoraml,
+        'hum_abnormal': hum_abnoraml
     })
 
 
@@ -195,22 +205,12 @@ if __name__ == "__main__":
         status = connect_db_table()
         if not status: # false, some connected errors happen
             exit(1)
-        rows = select_recent_sensor()
-        for row in rows:
-            print(row)
+        # rows = select_recent_sensor()
+        # for row in rows:
+        #     print(row)
         # start to run the web
         app.run(host='127.0.0.1', port=5000, debug=True)
-
-
-
     except KeyboardInterrupt: # allow press ctrl+c to interrupt the process
         print("Finish interacting data with DB, and quit the web server.")
     except Exception as err:
         print("Exception ERROR:", err)
-    finally:
-        # Close cursor and connection
-        if 'cur' in locals():
-            cur.close()
-        if 'cnx' in locals() and cnx.is_connected():
-            cnx.close()
-    
