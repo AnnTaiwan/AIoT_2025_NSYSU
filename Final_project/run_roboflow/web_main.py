@@ -6,7 +6,7 @@ import random
 
 # for web
 app = Flask(__name__)
-
+# get the accessinfo for accessing my DB
 load_dotenv()
 
 host = os.getenv("MYSQL_HOST")
@@ -125,7 +125,18 @@ def select_recent_frame(table_name=TABLE_NAME):
     cur.execute(sql)
     rows = cur.fetchall()
     return rows
+def select_log(table_name=TABLE_NAME): # get log info
+    sql = f"""
+        SELECT Log
+        FROM {table_name}
+        WHERE ID = 'a003'
+    """
+    cnx = get_connection()
+    cur = cnx.cursor()
 
+    cur.execute(sql)
+    rows = cur.fetchall()
+    return rows
 def select_ID(table_name=TABLE_NAME): # get all the ID
     # SQL query to delete data
     sql = "SELECT ID FROM " + table_name
@@ -166,7 +177,6 @@ def show_images():
     dates = [row[2] for row in rows_frame]
     image_paths = [row[3] for row in rows_frame]
     actions = [bool(row[4]) for row in rows_frame]  # 確保是布林值
-    print(actions)
     return jsonify({
         'output_date': dates,
         'output_frame': image_paths,
@@ -185,8 +195,8 @@ def show_sensors(): # return value in decreasing date
     Buzzer = [bool(row[5]) for row in rows_sensor]
     Door = [bool(row[6]) for row in rows_sensor]
     Duration = [row[7] for row in rows_sensor]
-    tem_abnoraml = [not ((tem < 80) and (tem > 20)) for tem in Temperature]
-    hum_abnoraml = [not ((hum < 50) and (hum > 20)) for hum in Humid]
+    tem_abnoraml = [not ((tem < 30) and (tem > 20)) for tem in Temperature]
+    hum_abnoraml = [not ((hum < 60) and (hum > 40)) for hum in Humid]
     return jsonify({
         'Date': Date,
         'Temperature': Temperature,
@@ -198,6 +208,46 @@ def show_sensors(): # return value in decreasing date
         'hum_abnormal': hum_abnoraml
     })
 
+@app.route('/update_image_status', methods=['POST'])
+def update_image_status(table_name=TABLE_NAME):
+    data = request.get_json()
+    image_path = data['image_path']
+    action = data['action']
+    print(f"Get new request to update action: {image_path}, {action}")
+
+    try:
+        cnx = get_connection()
+        cur = cnx.cursor()
+        # SQL query to update Action value for a specific Frame
+        sql = f"""
+            UPDATE {table_name}
+            SET Action = %s, Date = %s
+            WHERE Frame = %s
+        """
+        data_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Data to update
+        data = (action == "TAKE", data_time, image_path)
+
+        # Execute the SQL query
+        cur.execute(sql, data)
+
+        # Commit changes
+        cnx.commit()
+        print(f"Action value updated for frame: {image_path} to {action == 'TAKE'}")
+        result = cur.fetchone()
+        return jsonify({"success": True})
+    except Exception as e:
+        print(e)
+        return jsonify({"success": False})
+    
+@app.route('/show_logs', methods=['POST'])
+def show_logs():
+    rows_log = select_log()
+    
+    return jsonify({
+        'output_log': rows_log
+    })
 
 if __name__ == "__main__":
     # try to connect to the db

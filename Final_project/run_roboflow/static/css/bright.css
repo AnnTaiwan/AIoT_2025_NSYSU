@@ -249,3 +249,26 @@ canvas {
     flex: 1;
     text-align: center;
 }
+
+.log-window {
+    border: 1px solid #aaa;
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #fdfdfd;
+    height: 200px;
+    overflow-y: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    color: #000000;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+}
+
+.log-message {
+    margin-bottom: 5px;
+    padding: 5px;
+    border-bottom: 1px solid #eee;
+}
+
+.log-message:last-child {
+    border-bottom: none;
+}

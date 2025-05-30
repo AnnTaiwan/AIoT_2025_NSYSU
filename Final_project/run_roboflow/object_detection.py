@@ -10,6 +10,10 @@ import matplotlib.pyplot  as plt
 from dotenv import load_dotenv
 import os
 from time import sleep
+
+import re
+
+# get the accessinfo for accessing my DB
 load_dotenv()
 
 api_key = os.getenv("ROBOFLOW_API_KEY")
@@ -22,6 +26,7 @@ DB_NAME = os.getenv("MYSQL_DB")
 # load a pre-trained yolov8n model
 model = get_model(model_id="fruits-by-yolo/1")
 Class_Names = model.class_names
+# bbox color
 colors = {
     'Apple':       (255, 99, 132),   # 粉紅紅
     'Banana':      (255, 205, 86),   # 明亮黃
@@ -36,7 +41,9 @@ colors = {
 
 # DB const variable
 TABLE_NAME = os.getenv("TABLE_NAME")
-
+# log's column device and id for inserting data
+log_id_name = "a003"
+log_device = "mypc"
 ############# DB ################
 def get_connection():
     cnx = mysql.connector.connect(
@@ -59,6 +66,25 @@ def insert_data(id_name, device, time_data, frame:str, action:bool, table_name=T
     
     # Data to insert
     data = (id_name, device, time_data, frame, action) 
+
+    # Execute the SQL query
+    cur.execute(sql, data)
+
+    # Commit changes
+    cnx.commit()
+    print("Data \033[94minserted\033[0m successfully:", data)
+
+def insert_log(id_name, device, time_data, log:str, table_name=TABLE_NAME):
+    cnx = get_connection()
+    cur = cnx.cursor()
+    # SQL query to insert data
+    sql = f"""
+        INSERT INTO {table_name} (ID, Device, Date, Log)
+        VALUES (%s, %s, %s, %s)
+    """
+    
+    # Data to insert
+    data = (id_name, device, time_data, log) 
 
     # Execute the SQL query
     cur.execute(sql, data)
@@ -147,6 +173,24 @@ def select_door(table_name=TABLE_NAME):
     rows = cur.fetchall()
     return rows
 
+def select_frame_action(table_name=TABLE_NAME):
+    cnx = get_connection()
+    cur = cnx.cursor()
+    # SQL query to delete data
+    # select all except the frame(too big)
+    sql = f"""
+        SELECT Frame, Action
+        FROM {table_name}
+        WHERE ID = 'a002'
+    """
+    
+    # Execute the SQL query
+    cur.execute(sql)
+    # SELECT  no need to commit update to db
+    rows = cur.fetchall()
+    return rows
+
+
 def select_all(table_name=TABLE_NAME):
     cnx = get_connection()
     cur = cnx.cursor()
@@ -206,6 +250,7 @@ def init_db_table(table_name=TABLE_NAME):
         print(f"✅ Initialize the {table_name} table successfully!")
         return True
 ############### Object detection ##################################
+'''
 def see_if_match(src_dir: str, new_image, orb, bf):
     print("-"*80)
     print("[START] One object is taken out. Start to see if it matches with the db data...")
@@ -289,6 +334,31 @@ def see_if_match(src_dir: str, new_image, orb, bf):
         print("\n[FINAL] No match found over threshold.")
 
     return match_file
+'''
+def see_if_match_type(object_label): # when taking out a fruit from refrigerator, to match with the db and update the action(PUT, TAKE)
+    print("-" * 80)
+    print(f"[START] One {object_label} is taken out.")
+    print("[INFO] Start to see if it matches with the db data...")
+    
+    match_files = None
+    rows = select_frame_action()  # return [(frame, action), ...]
+    print(f"[INFO] Fetched {len(rows)} rows from database.")
+
+    for idx, row in enumerate(rows):
+        frame, action = row
+        print(f"[CHECK] Row {idx+1}: frame = {frame}, action = {'TAKE' if action else 'PUT'}")
+
+        if not action:
+            if re.search(object_label, frame):
+                print(f"  [SUCCESS] Match found: {frame}")
+                match_files = frame
+                return match_files
+        else:
+            print(f"  [SKIP] {frame} is already taken out.")
+
+    print("[END] No match found.")
+    return match_files
+
 
 def init_cap(source): # init the camera
     cap = cv2.VideoCapture(source)
@@ -331,20 +401,19 @@ def object_detect(cap, id_name, device):
     DETECT = False
     STATUS = None
     pre_xmin = WIDTH
-    # dict to record type of screenshots
-    count = { cls: 0 for cls in Class_Names}
+    
 
     SHOT_OR_NOT = False
     Fruits = list() # detected fruits
     if not cap.isOpened():
         print("Cannot open camera")
         exit()
-
+    ''' Not used!
     # for matching
     orb = cv2.ORB_create()  # Create ORB detector
     # Create Brute-Force matcher with Hamming distance
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-
+    '''
     # start to detect...
     while True:
         ret, frame = cap.read()
@@ -359,10 +428,10 @@ def object_detect(cap, id_name, device):
         for i, box in enumerate(bboxes):
             x_min, y_min, x_max, y_max = box
             # decide direction
-            if x_min > pre_xmin: # move to left, put the fruits
+            if x_min > pre_xmin: # move to right, put the fruits
                 STATUS = "PUT"
                 pre_xmin = x_min # update the previous position
-            elif x_min < pre_xmin: # move to right, take the fruits
+            elif x_min < pre_xmin: # move to left, take the fruits
                 STATUS = "TAKE"
                 pre_xmin = x_min # update the previous position
             else: # not move
@@ -375,23 +444,33 @@ def object_detect(cap, id_name, device):
                 if not SHOT_OR_NOT and abs(mid - MIDDLE_X) < 5:
                     # only crop the object
                     cropped_object = frame[int(y_min):int(y_max), int(x_min):int(x_max)]
-
+                    # Get the current time in %Y-%m-%d %H:%M:%S format
+                    data_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    log_data = f"{data_time} => {STATUS}: "
                     # if action is "TAKE", use SIFT to test if this object is same as one object in the db already, if so, change the action status in db
                     if STATUS == "TAKE":
+                        '''
                         match_file = see_if_match("static/screenshots/", cropped_object, orb, bf)
+                        '''
+                        match_file = see_if_match_type(Class_Names[class_ids[i]])
                         if match_file == None: # didn't match, skip this detection
+                            log_data += f"This object({Class_Names[class_ids[i]]}) didn't match any object in DB."
+                            insert_log(log_id_name, log_device, data_time, log_data)
                             continue
                         else:
-                            update_action_by_frame(match_file, STATUS == "TAKE")
+                            update_action_by_frame(match_file, STATUS == "TAKE") # change action(PUT) into (TAKE)
+                            log_data += f"One object({match_file.split('/')[-1][:-4]}) is taken out."
+                            insert_log(log_id_name, log_device, data_time, log_data)
                             SHOT_OR_NOT = True
                             continue
                     # save the screenshots
                     filepath = "static/screenshots/" + Class_Names[class_ids[i]] + "_" + str(count[Class_Names[class_ids[i]]]) + ".jpg"
                     cv2.imwrite(filepath, cropped_object)
-                    
+                    # insert log
+                    log_data += f"One object({filepath.split('/')[-1][:-4]}) is put."
+                    insert_log(log_id_name, log_device, data_time, log_data)
+
                     # insert path into db
-                    # Get the current time in %Y-%m-%d %H:%M:%S format
-                    data_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     insert_data(id_name, device, data_time, filepath, STATUS == "TAKE")
                     # print the info
                     print(f"{sum(count.values())}: {data_time} Take the screenshot at {box}, and saved in {filepath}")
@@ -431,12 +510,11 @@ def object_detect(cap, id_name, device):
 
         if cv2.waitKey(1) == ord('q'):
             break
-
+        
         doors = select_door()
-        if doors[0][0] != True: # door is close
+        if len(doors) > 0 and doors[0][0] != True: # door is close
             break
-    
-def clear_directory(dir_path):
+def clear_directory(dir_path): # clear all screenshots
     for filename in os.listdir(dir_path):
         file_path = os.path.join(dir_path, filename)
         try:
@@ -452,19 +530,22 @@ if __name__ == "__main__":
         status = init_db_table(TABLE_NAME)
         # clear previous screenshots
         clear_directory("static/screenshots/")
+        # dict to record type of screenshots
+        count = { cls: 0 for cls in Class_Names}
         # set up basic info
         id_name = "a002"
         device = "mypc"
-        # cap = init_cap("videos/apple_flow2.mp4")
+        # choose source
         # cap = init_cap(0)
         # cap = init_cap(1)
         url = os.getenv("DROID_CAM")
         cap = init_cap(url)
+
         # see if door is open
         while True:
             doors = select_door()
             print("Door status:", "Open" if doors[0][0] else "Close")
-            if doors[0][0] == True:
+            if len(doors) > 0 and doors[0][0] == True:
                 object_detect(cap, id_name, device) # main program to detect objects and write it into db
             else: # just play every frame
                 sleep(1)

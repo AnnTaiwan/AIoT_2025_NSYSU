@@ -4,8 +4,6 @@
     <meta charset="UTF-8" />
     <title>智慧冰箱</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- <link rel="stylesheet" href="/static/css/sci.css"/> -->
-    <!-- <link rel="stylesheet" href="/static/css/refri.css"/> -->
     <link rel="stylesheet" href="/static/css/bright.css"/>
 
     <script>
@@ -74,7 +72,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             initCharts();
             setInterval(deal_sensor_value, 1000);
-            setInterval(turn_to_present, 3000);
+            setInterval(turn_to_present, 4000);
+            setInterval(deal_logs, 1000);  // 每 2 秒更新 log
         });
 
         function turn_to_present() {
@@ -103,10 +102,12 @@
                             }
                             img.alt = path.split('/').pop();
                             img.className = 'label-image';
+                            // click on image to update status
+                            img.onclick = () => updateImageStatus_TAKE(path);
 
                             const label = document.createElement('div');
                             const filename = path.split('/').pop();
-                            const labelText = filename.split('_')[0];
+                            const labelText = filename.split('.')[0];
                             label.innerHTML = `
                                 <div class="label-text">${labelText}</div>
                                 <div class="label-date-in">${dates[index]}</div>
@@ -148,10 +149,12 @@
                             }
                             img.alt = path.split('/').pop();
                             img.className = 'label-image';
+                            // click on image to update status
+                            img.onclick = () => updateImageStatus_PUT(path);
 
                             const label = document.createElement('div');
                             const filename = path.split('/').pop();
-                            const labelText = filename.split('_')[0];
+                            const labelText = filename.split('.')[0];
                             label.innerHTML = `
                                 <div class="label-text">${labelText}</div>
                                 <div class="label-date-out">${dates[index]}</div>
@@ -165,6 +168,62 @@
                     });
                 });
         }
+        function updateImageStatus_PUT(imagePath) {
+            fetch('/update_image_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_path: imagePath,
+                                       action: "PUT"
+                 })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    label_object = 
+                    alert(`已成功更新物件 ${imagePath.split('/').pop().split('.')[0]} 到 目前冰箱內容物`);
+                } else {
+                    alert('更新失敗');
+                }
+            });
+        }
+        function updateImageStatus_TAKE(imagePath) {
+            fetch('/update_image_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_path: imagePath,
+                                       action: "TAKE"
+                 })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`已成功更新物件 ${imagePath.split('/').pop().split('.')[0]} 到 已取出`);
+                } else {
+                    alert('更新失敗');
+                }
+            });
+        }
+        function deal_logs() {
+            fetch('/show_logs', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    const logWindow = document.getElementById('log_window');
+                    logWindow.innerHTML = '';
+
+                    data.output_log.forEach(log => {
+                        const message = document.createElement('div');
+                        message.classList.add('log-message');
+
+                        message.textContent = log;
+                        logWindow.appendChild(message);
+                    });
+
+                    // 自動捲到底部
+                    logWindow.scrollTop = logWindow.scrollHeight;
+                });
+        }
+
+
     </script>
 </head>
 
@@ -204,6 +263,10 @@
                 <button id="btn_takeout" class="button" onclick="turn_to_take_out()">已取出</button>
             </div>
             <div id="images" class="image-grid"></div>
+            <div class="logs">
+                <h3>事件紀錄</h3>
+                <div id="log_window" class="log-window"></div>
+            </div>
         </div>
         </div>
     </div>
