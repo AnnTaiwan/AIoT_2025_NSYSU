@@ -441,7 +441,7 @@ def object_detect(cap, id_name, device):
                 DETECT = True
                 # print("Object crosses the middle line!", box)
                 mid = (x_max + x_min) / 2
-                if not SHOT_OR_NOT and abs(mid - MIDDLE_X) < 5:
+                if not SHOT_OR_NOT and abs(mid - MIDDLE_X) < 8:
                     # only crop the object
                     cropped_object = frame[int(y_min):int(y_max), int(x_min):int(x_max)]
                     # Get the current time in %Y-%m-%d %H:%M:%S format
